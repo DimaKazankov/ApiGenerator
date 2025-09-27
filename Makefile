@@ -2,6 +2,8 @@
 OPENAPI_FILE := swagger.json
 # Dynamically extract tags from the swagger file
 TAGS := $(shell python3 extract_tags.py $(OPENAPI_FILE) 2>/dev/null || echo "")
+# Derive base namespace from spec title (override with `make BASE_NS=MyNs`)
+BASE_NS ?= $(shell python3 derive_namespace.py $(OPENAPI_FILE) 2>/dev/null || echo "Api")
 
 # OpenAPI Generator options (C# client)
 CGEN := npx --yes @openapitools/openapi-generator-cli
@@ -69,6 +71,7 @@ help:
 	@echo ""
 	@echo "Configuration:"
 	@echo "  OPENAPI_FILE = $(OPENAPI_FILE)"
+	@echo "  BASE_NS      = $(BASE_NS)  (override: make BASE_NS=MyCompany.Api)"
 	@echo "  Detected tags: $(TAGS)"
 
 # ---- Approach A: OpenAPI Generator - Generate separate projects organized by tag namespace  
@@ -86,12 +89,12 @@ og-%: $(OPENAPI_FILE)
 	  -g csharp \
 	  -o "$(OUT_OG)/$$tag" \
 	  --global-property "$(CGEN_GLOBAL)" \
-	  --additional-properties "$(CGEN_PROPS),packageName=ShopApi.$$tag"; \
+	  --additional-properties "$(CGEN_PROPS),packageName=$(BASE_NS).$$tag"; \
 	$(PY) remove_comments.py "$(OUT_OG)/$$tag"; \
 	# Remove unwanted project files while keeping folder structure \
 	rm -f "$(OUT_OG)/$$tag"/*.sln; \
-	rm -f "$(OUT_OG)/$$tag"/src/*/ShopApi.*.csproj; \
-	rm -rf "$(OUT_OG)/$$tag"/src/*/ShopApi.*.Test; \
+	rm -f "$(OUT_OG)/$$tag"/src/*/*.csproj; \
+	rm -rf "$(OUT_OG)/$$tag"/src/*/*Test*; \
 	rm -f "$(OUT_OG)/$$tag"/appveyor.yml; \
 	rm -rf "$(OUT_OG)/$$tag"/api; \
 	rm -rf "$(OUT_OG)/$$tag"/.openapi-generator; \
@@ -113,7 +116,7 @@ nswag-%: $(OPENAPI_FILE)
 	$(NSWAG) openapi2csclient \
 	  /input:"$$filtered_spec" \
 	  /output:"$(OUT_NSWAG)/$$tag/Client/$${tag}Client.cs" \
-	  /namespace:ShopApi.$$tag.Client \
+	  /namespace:$(BASE_NS).$$tag.Client \
 	  /operationGenerationMode:MultipleClientsFromOperationId \
 	  /GenerateClientInterfaces:true \
 	  /GenerateDtoTypes:false \
@@ -124,7 +127,7 @@ nswag-%: $(OPENAPI_FILE)
 	$(NSWAG) openapi2csclient \
 	  /input:"$$filtered_spec" \
 	  /output:"$(OUT_NSWAG)/$$tag/Models/$${tag}Models.cs" \
-	  /namespace:ShopApi.$$tag.Models \
+	  /namespace:$(BASE_NS).$$tag.Models \
 	  /operationGenerationMode:SingleClientFromOperationId \
 	  /GenerateClientInterfaces:false \
 	  /GenerateClientClasses:false \
