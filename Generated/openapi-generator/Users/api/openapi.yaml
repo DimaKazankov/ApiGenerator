@@ -1,0 +1,260 @@
+openapi: 3.0.3
+info:
+  title: Shop API
+  version: 1.0.0
+servers:
+- url: /
+tags:
+- description: User management
+  name: Users
+- description: Order processing
+  name: Orders
+- description: Stock & catalog
+  name: Inventory
+paths:
+  /users:
+    get:
+      operationId: ListUsers
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: "#/components/schemas/User"
+                type: array
+          description: OK
+      tags:
+      - Users
+    post:
+      operationId: CreateUser
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserCreate"
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+          description: Created
+      tags:
+      - Users
+  /users/{id}:
+    get:
+      operationId: GetUser
+      parameters:
+      - explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          format: uuid
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+          description: OK
+        "404":
+          description: Not Found
+      tags:
+      - Users
+  /orders:
+    post:
+      operationId: CreateOrder
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrderCreate"
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+          description: Created
+      tags:
+      - Orders
+  /orders/{orderId}:
+    get:
+      operationId: GetOrder
+      parameters:
+      - explode: false
+        in: path
+        name: orderId
+        required: true
+        schema:
+          format: uuid
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+          description: OK
+        "404":
+          description: Not Found
+      tags:
+      - Orders
+  /inventory/items:
+    get:
+      operationId: ListItems
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: "#/components/schemas/Item"
+                type: array
+          description: OK
+      tags:
+      - Inventory
+  /inventory/items/{sku}:
+    patch:
+      operationId: UpdateStock
+      parameters:
+      - explode: false
+        in: path
+        name: sku
+        required: true
+        schema:
+          type: string
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StockUpdate"
+        required: true
+      responses:
+        "204":
+          description: No Content
+      tags:
+      - Inventory
+      - Orders
+components:
+  schemas:
+    User:
+      example:
+        name: name
+        id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        email: email
+      properties:
+        id:
+          format: uuid
+          type: string
+        email:
+          format: email
+          type: string
+        name:
+          nullable: true
+          type: string
+      required:
+      - email
+      - id
+      type: object
+    UserCreate:
+      example:
+        name: name
+        email: email
+      properties:
+        email:
+          format: email
+          type: string
+        name:
+          nullable: true
+          type: string
+      required:
+      - email
+      type: object
+    Order:
+      example:
+        id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        userId: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        items:
+        - quantity: 0
+          sku: sku
+        - quantity: 0
+          sku: sku
+        status: Pending
+      properties:
+        id:
+          format: uuid
+          type: string
+        userId:
+          format: uuid
+          type: string
+        items:
+          items:
+            $ref: "#/components/schemas/Item"
+          type: array
+        status:
+          enum:
+          - Pending
+          - Paid
+          - Shipped
+          - Cancelled
+          type: string
+      required:
+      - id
+      - items
+      - userId
+      type: object
+    OrderCreate:
+      example:
+        userId: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        items:
+        - quantity: 0
+          sku: sku
+        - quantity: 0
+          sku: sku
+      properties:
+        userId:
+          format: uuid
+          type: string
+        items:
+          items:
+            $ref: "#/components/schemas/Item"
+          type: array
+      required:
+      - items
+      - userId
+      type: object
+    Item:
+      example:
+        quantity: 0
+        sku: sku
+      properties:
+        sku:
+          type: string
+        quantity:
+          format: int32
+          minimum: 0
+          type: integer
+      required:
+      - quantity
+      - sku
+      type: object
+    StockUpdate:
+      example:
+        delta: 0
+      properties:
+        delta:
+          format: int32
+          type: integer
+      required:
+      - delta
+      type: object
+

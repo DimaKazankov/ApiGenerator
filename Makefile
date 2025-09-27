@@ -7,7 +7,7 @@ TAGS := $(shell python3 extract_tags.py $(OPENAPI_FILE) 2>/dev/null || echo "")
 CGEN := npx --yes @openapitools/openapi-generator-cli
 CGEN_PROPS := nullableReferenceTypes=true,validatable=false,hideGenerationTimestamp=true,nonPublicApi=false
 # Disable only documentation files
-CGEN_GLOBAL := apiDocs=false,modelDocs=false
+CGEN_GLOBAL := apiDocs=false,modelDocs=false,apiTests=false,modelTests=false
 
 # NSwag CLI
 NSWAG := nswag
