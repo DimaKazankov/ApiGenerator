@@ -67,7 +67,15 @@ og-%: $(OPENAPI_FILE)
 	  -o "$(OUT_OG)/$$tag" \
 	  --global-property "$(CGEN_GLOBAL)" \
 	  --additional-properties "$(CGEN_PROPS),packageName=ShopApi.$$tag"; \
-	$(PY) remove_comments.py "$(OUT_OG)/$$tag"
+	$(PY) remove_comments.py "$(OUT_OG)/$$tag"; \
+	# Remove unwanted project files while keeping folder structure \
+	rm -f "$(OUT_OG)/$$tag"/*.sln; \
+	rm -f "$(OUT_OG)/$$tag"/src/*/ShopApi.*.csproj; \
+	rm -rf "$(OUT_OG)/$$tag"/src/*/ShopApi.*.Test; \
+	rm -f "$(OUT_OG)/$$tag"/appveyor.yml; \
+	rm -rf "$(OUT_OG)/$$tag"/api; \
+	rm -rf "$(OUT_OG)/$$tag"/.openapi-generator; \
+	rm -rf "$(OUT_OG)/$$tag"/docs
 
 # ---- Approach B: NSwag - Generate separate client files organized by tags
 # Each tag gets its own client file with all APIs, but organized by tag namespace
