@@ -1,0 +1,153 @@
+{
+  "openapi": "3.0.3",
+  "info": { "title": "Shop API", "version": "1.0.0" },
+  "tags": [
+    { "name": "Users", "description": "User management" },
+    { "name": "Orders", "description": "Order processing" },
+    { "name": "Inventory", "description": "Stock & catalog" }
+  ],
+  "paths": {
+    "/users": {
+      "get": {
+        "operationId": "ListUsers",
+        "tags": ["Users"],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/User" } } } }
+          }
+        }
+      },
+      "post": {
+        "operationId": "CreateUser",
+        "tags": ["Users"],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UserCreate" } } }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/User" } } }
+          }
+        }
+      }
+    },
+    "/users/{id}": {
+      "get": {
+        "operationId": "GetUser",
+        "tags": ["Users"],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/User" } } } },
+          "404": { "description": "Not Found" }
+        }
+      }
+    },
+    "/orders": {
+      "post": {
+        "operationId": "CreateOrder",
+        "tags": ["Orders"],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OrderCreate" } } }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Order" } } }
+          }
+        }
+      }
+    },
+    "/orders/{orderId}": {
+      "get": {
+        "operationId": "GetOrder",
+        "tags": ["Orders"],
+        "parameters": [{ "name": "orderId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Order" } } } },
+          "404": { "description": "Not Found" }
+        }
+      }
+    },
+    "/inventory/items": {
+      "get": {
+        "operationId": "ListItems",
+        "tags": ["Inventory"],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Item" } } } }
+          }
+        }
+      }
+    },
+    "/inventory/items/{sku}": {
+      "patch": {
+        "operationId": "UpdateStock",
+        "tags": ["Inventory", "Orders"],
+        "parameters": [{ "name": "sku", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/StockUpdate" } } }
+        },
+        "responses": { "204": { "description": "No Content" } }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "User": {
+        "type": "object",
+        "required": ["id", "email"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "email": { "type": "string", "format": "email" },
+          "name": { "type": "string", "nullable": true }
+        }
+      },
+      "UserCreate": {
+        "type": "object",
+        "required": ["email"],
+        "properties": {
+          "email": { "type": "string", "format": "email" },
+          "name": { "type": "string", "nullable": true }
+        }
+      },
+      "Order": {
+        "type": "object",
+        "required": ["id", "userId", "items"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "userId": { "type": "string", "format": "uuid" },
+          "items": { "type": "array", "items": { "$ref": "#/components/schemas/Item" } },
+          "status": { "type": "string", "enum": ["Pending", "Paid", "Shipped", "Cancelled"] }
+        }
+      },
+      "OrderCreate": {
+        "type": "object",
+        "required": ["userId", "items"],
+        "properties": {
+          "userId": { "type": "string", "format": "uuid" },
+          "items": { "type": "array", "items": { "$ref": "#/components/schemas/Item" } }
+        }
+      },
+      "Item": {
+        "type": "object",
+        "required": ["sku", "quantity"],
+        "properties": {
+          "sku": { "type": "string" },
+          "quantity": { "type": "integer", "format": "int32", "minimum": 0 }
+        }
+      },
+      "StockUpdate": {
+        "type": "object",
+        "required": ["delta"],
+        "properties": {
+          "delta": { "type": "integer", "format": "int32" }
+        }
+      }
+    }
+  }
+}
