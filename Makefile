@@ -25,8 +25,23 @@ OUT_AUTOREST := $(OUT_ROOT)/autorest
 PY := python3
 
 # ---- top-level ----
-.PHONY: all clean og-by-tag nswag-by-tag show-tags help
+.PHONY: all clean og-by-tag nswag-by-tag show-tags help install-nswag install-openapi-generator
 all: og-by-tag nswag-by-tag
+
+# Install NSwag CLI tool if not already installed
+install-nswag:
+	@export PATH="$$PATH:$$HOME/.dotnet/tools"; \
+	if ! command -v nswag >/dev/null 2>&1; then \
+		echo "Installing NSwag CLI tool..."; \
+		dotnet tool install --global NSwag.ConsoleCore; \
+	else \
+		echo "NSwag CLI tool is already installed"; \
+	fi
+
+# Install/verify OpenAPI Generator CLI tool
+install-openapi-generator:
+	@echo "Verifying OpenAPI Generator CLI tool..."
+	@$(CGEN) version || echo "OpenAPI Generator will be installed automatically on first use"
 
 clean:
 	@rm -rf $(OUT_ROOT)
@@ -46,6 +61,8 @@ help:
 	@echo "  all         - Generate code using both approaches"
 	@echo "  og-by-tag   - Generate code using OpenAPI Generator (one project per tag)"
 	@echo "  nswag-by-tag - Generate code using NSwag (one client file per tag)"  
+	@echo "  install-nswag - Install NSwag CLI tool if not already installed"
+	@echo "  install-openapi-generator - Verify OpenAPI Generator CLI tool"
 	@echo "  show-tags   - Show tags detected in $(OPENAPI_FILE)"
 	@echo "  clean       - Remove all generated files"
 	@echo "  help        - Show this help"
@@ -79,12 +96,13 @@ og-%: $(OPENAPI_FILE)
 
 # ---- Approach B: NSwag - Generate separate client files organized by tags
 # Each tag gets its own client file with all APIs, but organized by tag namespace
-nswag-by-tag: $(TAGS:%=nswag-%)
+nswag-by-tag: install-nswag $(TAGS:%=nswag-%)
 
 nswag-%: $(OPENAPI_FILE)
 	@tag=$*; \
 	mkdir -p "$(OUT_NSWAG)"; \
-	PATH="$$PATH:~/.dotnet/tools" $(NSWAG) openapi2csclient \
+	export PATH="$$PATH:$$HOME/.dotnet/tools"; \
+	$(NSWAG) openapi2csclient \
 	  /input:"$(OPENAPI_FILE)" \
 	  /output:"$(OUT_NSWAG)/$${tag}Client.cs" \
 	  /namespace:ShopApi.$$tag \
