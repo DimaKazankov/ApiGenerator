@@ -78,8 +78,11 @@ og-by-tag: $(TAGS:%=og-%)
 og-%: $(OPENAPI_FILE)
 	@tag=$*; \
 	mkdir -p "$(OUT_OG)/$$tag"; \
+	mkdir -p "$(OUT_ROOT)/filtered"; \
+	filtered_spec=$$($(PY) filter_swagger.py "$(OPENAPI_FILE)" "$(OUT_ROOT)/filtered" "$$tag"); \
+	if [ -z "$$filtered_spec" ]; then echo "Failed to filter spec for tag $$tag"; exit 1; fi; \
 	$(CGEN) generate \
-	  -i "$(OPENAPI_FILE)" \
+	  -i "$$filtered_spec" \
 	  -g csharp \
 	  -o "$(OUT_OG)/$$tag" \
 	  --global-property "$(CGEN_GLOBAL)" \
@@ -102,10 +105,13 @@ nswag-%: $(OPENAPI_FILE)
 	@tag=$*; \
 	mkdir -p "$(OUT_NSWAG)/$$tag/Client"; \
 	mkdir -p "$(OUT_NSWAG)/$$tag/Models"; \
+	mkdir -p "$(OUT_ROOT)/filtered"; \
+	filtered_spec=$$($(PY) filter_swagger.py "$(OPENAPI_FILE)" "$(OUT_ROOT)/filtered" "$$tag"); \
+	if [ -z "$$filtered_spec" ]; then echo "Failed to filter spec for tag $$tag"; exit 1; fi; \
 	export PATH="$$PATH:$$HOME/.dotnet/tools"; \
 	echo "Generating client interfaces and implementations for $$tag..."; \
 	$(NSWAG) openapi2csclient \
-	  /input:"$(OPENAPI_FILE)" \
+	  /input:"$$filtered_spec" \
 	  /output:"$(OUT_NSWAG)/$$tag/Client/$${tag}Client.cs" \
 	  /namespace:ShopApi.$$tag.Client \
 	  /operationGenerationMode:MultipleClientsFromOperationId \
@@ -116,7 +122,7 @@ nswag-%: $(OPENAPI_FILE)
 	  /GenerateContractsOutput:false; \
 	echo "Generating DTOs/Models for $$tag..."; \
 	$(NSWAG) openapi2csclient \
-	  /input:"$(OPENAPI_FILE)" \
+	  /input:"$$filtered_spec" \
 	  /output:"$(OUT_NSWAG)/$$tag/Models/$${tag}Models.cs" \
 	  /namespace:ShopApi.$$tag.Models \
 	  /operationGenerationMode:SingleClientFromOperationId \

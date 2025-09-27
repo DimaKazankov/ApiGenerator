@@ -1,11 +1,6 @@
 {
   "openapi": "3.0.3",
   "info": { "title": "Shop API", "version": "1.0.0" },
-  "tags": [
-    { "name": "Users", "description": "User management" },
-    { "name": "Orders", "description": "Order processing" },
-    { "name": "Inventory", "description": "Stock & catalog" }
-  ],
   "paths": {
     "/users": {
       "get": {
