@@ -94,23 +94,37 @@ og-%: $(OPENAPI_FILE)
 	rm -rf "$(OUT_OG)/$$tag"/.openapi-generator; \
 	rm -rf "$(OUT_OG)/$$tag"/docs
 
-# ---- Approach B: NSwag - Generate separate client files organized by tags
-# Each tag gets its own client file with all APIs, but organized by tag namespace
+# ---- Approach B: NSwag - Generate separate folders per tag with separated responsibilities
+# Each tag gets its own folder with Client/ and Models/ subfolders for better organization
 nswag-by-tag: install-nswag $(TAGS:%=nswag-%)
 
 nswag-%: $(OPENAPI_FILE)
 	@tag=$*; \
-	mkdir -p "$(OUT_NSWAG)"; \
+	mkdir -p "$(OUT_NSWAG)/$$tag/Client"; \
+	mkdir -p "$(OUT_NSWAG)/$$tag/Models"; \
 	export PATH="$$PATH:$$HOME/.dotnet/tools"; \
+	echo "Generating client interfaces and implementations for $$tag..."; \
 	$(NSWAG) openapi2csclient \
 	  /input:"$(OPENAPI_FILE)" \
-	  /output:"$(OUT_NSWAG)/$${tag}Client.cs" \
-	  /namespace:ShopApi.$$tag \
+	  /output:"$(OUT_NSWAG)/$$tag/Client/$${tag}Client.cs" \
+	  /namespace:ShopApi.$$tag.Client \
 	  /operationGenerationMode:MultipleClientsFromOperationId \
 	  /GenerateClientInterfaces:true \
-	  /GenerateDtoTypes:true \
+	  /GenerateDtoTypes:false \
 	  /UseBaseUrl:true \
 	  /GenerateOptionalParameters:true \
 	  /GenerateContractsOutput:false; \
-	$(PY) remove_comments.py "$(OUT_NSWAG)"
+	echo "Generating DTOs/Models for $$tag..."; \
+	$(NSWAG) openapi2csclient \
+	  /input:"$(OPENAPI_FILE)" \
+	  /output:"$(OUT_NSWAG)/$$tag/Models/$${tag}Models.cs" \
+	  /namespace:ShopApi.$$tag.Models \
+	  /operationGenerationMode:SingleClientFromOperationId \
+	  /GenerateClientInterfaces:false \
+	  /GenerateClientClasses:false \
+	  /GenerateDtoTypes:true \
+	  /UseBaseUrl:false \
+	  /GenerateOptionalParameters:false \
+	  /GenerateContractsOutput:false; \
+	$(PY) remove_comments.py "$(OUT_NSWAG)/$$tag"
 
