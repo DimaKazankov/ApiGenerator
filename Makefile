@@ -2,8 +2,9 @@
 OPENAPI_FILE := swagger.json
 # Dynamically extract tags from the swagger file
 TAGS := $(shell python3 extract_tags.py $(OPENAPI_FILE) 2>/dev/null || echo "")
-# Derive base namespace from spec title (override with `make BASE_NS=MyNs`)
-BASE_NS ?= $(shell python3 derive_namespace.py $(OPENAPI_FILE) 2>/dev/null || echo "Api")
+# Optional base namespace prefix (override with `make BASE_NS=MyNs`).
+# Default is to use the tag name as the root (e.g., Users.Api / Users.Dto)
+BASE_NS ?=
 
 # OpenAPI Generator options (C# client)
 CGEN := npx --yes @openapitools/openapi-generator-cli
@@ -71,7 +72,7 @@ help:
 	@echo ""
 	@echo "Configuration:"
 	@echo "  OPENAPI_FILE = $(OPENAPI_FILE)"
-	@echo "  BASE_NS      = $(BASE_NS)  (override: make BASE_NS=MyCompany.Api)"
+	@echo "  BASE_NS      = $(BASE_NS)  (default: use tag-root like Users.Api/Users.Dto)"
 	@echo "  Detected tags: $(TAGS)"
 
 # ---- Approach A: OpenAPI Generator - Generate separate projects organized by tag namespace  
@@ -84,12 +85,13 @@ og-%: $(OPENAPI_FILE)
 	mkdir -p "$(OUT_ROOT)/filtered"; \
 	filtered_spec=$$($(PY) filter_swagger.py "$(OPENAPI_FILE)" "$(OUT_ROOT)/filtered" "$$tag"); \
 	if [ -z "$$filtered_spec" ]; then echo "Failed to filter spec for tag $$tag"; exit 1; fi; \
+	if [ -n "$(BASE_NS)" ]; then pkg_ns="$(BASE_NS).$$tag"; else pkg_ns="$$tag"; fi; \
 	$(CGEN) generate \
 	  -i "$$filtered_spec" \
 	  -g csharp \
 	  -o "$(OUT_OG)/$$tag" \
 	  --global-property "$(CGEN_GLOBAL)" \
-	  --additional-properties "$(CGEN_PROPS),packageName=$(BASE_NS).$$tag"; \
+	  --additional-properties "$(CGEN_PROPS),packageName=$$pkg_ns"; \
 	$(PY) remove_comments.py "$(OUT_OG)/$$tag"; \
 	# Remove unwanted project files while keeping folder structure \
 	rm -f "$(OUT_OG)/$$tag"/*.sln; \
@@ -111,12 +113,13 @@ nswag-%: $(OPENAPI_FILE)
 	mkdir -p "$(OUT_ROOT)/filtered"; \
 	filtered_spec=$$($(PY) filter_swagger.py "$(OPENAPI_FILE)" "$(OUT_ROOT)/filtered" "$$tag"); \
 	if [ -z "$$filtered_spec" ]; then echo "Failed to filter spec for tag $$tag"; exit 1; fi; \
+	if [ -n "$(BASE_NS)" ]; then client_ns="$(BASE_NS).$$tag.Api"; models_ns="$(BASE_NS).$$tag.Dto"; else client_ns="$$tag.Api"; models_ns="$$tag.Dto"; fi; \
 	export PATH="$$PATH:$$HOME/.dotnet/tools"; \
 	echo "Generating client interfaces and implementations for $$tag..."; \
 	$(NSWAG) openapi2csclient \
 	  /input:"$$filtered_spec" \
 	  /output:"$(OUT_NSWAG)/$$tag/Client/$${tag}Client.cs" \
-	  /namespace:$(BASE_NS).$$tag.Client \
+	  /namespace:$$client_ns \
 	  /operationGenerationMode:MultipleClientsFromOperationId \
 	  /GenerateClientInterfaces:true \
 	  /GenerateDtoTypes:false \
@@ -127,7 +130,7 @@ nswag-%: $(OPENAPI_FILE)
 	$(NSWAG) openapi2csclient \
 	  /input:"$$filtered_spec" \
 	  /output:"$(OUT_NSWAG)/$$tag/Models/$${tag}Models.cs" \
-	  /namespace:$(BASE_NS).$$tag.Models \
+	  /namespace:$$models_ns \
 	  /operationGenerationMode:SingleClientFromOperationId \
 	  /GenerateClientInterfaces:false \
 	  /GenerateClientClasses:false \
